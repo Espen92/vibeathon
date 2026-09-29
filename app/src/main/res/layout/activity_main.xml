@@ -1,33 +1,293 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="24dp">
+    android:fillViewport="true">
 
-    <TextView
-        android:id="@+id/hello"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/hello_world"
-        android:textSize="32sp"
-        android:textStyle="bold" />
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <TextView
-        android:id="@+id/message"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:gravity="center"
-        android:text="@string/welcome_message"
-        android:textSize="18sp" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/setup_title"
+            android:textSize="24sp"
+            android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/tap_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="@string/tap_button" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/setup_intro" />
 
-</LinearLayout>
+        <TextView
+            style="@style/SectionHeader"
+            android:text="@string/section_setup" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/status_overlay"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/check_overlay"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/button_overlay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/action_open" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/status_accessibility"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/check_accessibility"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/button_accessibility"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/action_open" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/status_microphone"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/check_microphone"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/button_microphone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/action_grant" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/status_notifications"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/check_notifications"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/button_notifications"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/action_grant" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/status_chatgpt"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/check_chatgpt"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/button_chatgpt"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/action_install" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/restricted_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/restricted_settings_hint"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/button_app_info"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/action_app_info" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/button_toggle_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/start_overlay" />
+
+        <TextView
+            style="@style/SectionHeader"
+            android:text="@string/section_settings" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/setting_strategy"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/strategy_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RadioButton
+                android:id="@+id/strategy_share"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/strategy_share" />
+
+            <RadioButton
+                android:id="@+id/strategy_accessibility"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/strategy_accessibility" />
+
+            <RadioButton
+                android:id="@+id/strategy_transcribe"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/strategy_transcribe" />
+        </RadioGroup>
+
+        <TextView
+            android:id="@+id/strategy_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/strategy_transcribe_note"
+            android:textSize="13sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:labelFor="@+id/prompt"
+            android:text="@string/setting_prompt"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/prompt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:importantForAutofill="no"
+            android:inputType="textMultiLine|textCapSentences" />
+
+        <Switch
+            android:id="@+id/auto_read"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/setting_auto_read" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:labelFor="@+id/reply_timeout"
+            android:text="@string/setting_reply_timeout"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/reply_timeout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:importantForAutofill="no"
+            android:inputType="number" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:labelFor="@+id/max_recording"
+            android:text="@string/setting_max_recording"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/max_recording"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:importantForAutofill="no"
+            android:inputType="number" />
+
+        <TextView
+            style="@style/SectionHeader"
+            android:text="@string/section_debug" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/debug_hint"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/debug_copy"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/debug_copy" />
+
+            <Button
+                android:id="@+id/debug_clear"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/debug_clear" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/debug_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#FFEEEEEE"
+            android:fontFamily="monospace"
+            android:padding="8dp"
+            android:textIsSelectable="true"
+            android:textSize="11sp" />
+    </LinearLayout>
+</ScrollView>

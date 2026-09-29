@@ -1,12 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Vibeathon</string>
-    <string name="hello_world">Hello World</string>
-    <string name="welcome_message">Welcome to Vibeathon! Tap the button below.</string>
-    <string name="tap_button">Tap me</string>
+    <string name="default_prompt">respond to the prompt in the voice file</string>
 
-    <plurals name="tap_count_message">
-        <item quantity="one">You tapped %1$d time. Keep going!</item>
-        <item quantity="other">You tapped %1$d times. Keep going!</item>
-    </plurals>
+    <!-- Setup screen -->
+    <string name="setup_title">Hands-free ChatGPT voice</string>
+    <string name="setup_intro">Tap the floating bubble once to start a voice memo and again to stop. The memo is sent to your current ChatGPT chat and the reply is read aloud automatically.</string>
+    <string name="section_setup">Setup checklist</string>
+    <string name="check_overlay">Display over other apps</string>
+    <string name="check_accessibility">Accessibility service enabled</string>
+    <string name="check_microphone">Microphone permission</string>
+    <string name="check_notifications">Notification permission</string>
+    <string name="check_chatgpt">ChatGPT installed</string>
+    <string name="status_ok">✅ %1$s</string>
+    <string name="status_missing">❌ %1$s</string>
+    <string name="action_open">Open</string>
+    <string name="action_grant">Grant</string>
+    <string name="action_install">Install</string>
+    <string name="action_app_info">App info</string>
+    <string name="restricted_settings_hint">Android 13+: if the accessibility toggle is greyed out (\"Restricted setting\"), open App info → ⋮ → Allow restricted settings, then try again.</string>
+    <string name="start_overlay">Start overlay</string>
+    <string name="stop_overlay">Stop overlay</string>
+    <string name="overlay_needs_permissions">Grant \"Display over other apps\" and microphone permission first.</string>
+
+    <string name="section_settings">Settings</string>
+    <string name="setting_strategy">Delivery strategy</string>
+    <string name="strategy_share">Share intent (default) – share the audio file to ChatGPT and press Send</string>
+    <string name="strategy_accessibility">Accessibility – attach the file through ChatGPT\'s attachment menu (Android 10+)</string>
+    <string name="strategy_transcribe">Transcribe fallback – on-device speech-to-text, send the transcript as text</string>
+    <string name="strategy_transcribe_note">Use the transcribe fallback if ChatGPT rejects or ignores audio attachments for your model or account. It uses Android\'s SpeechRecognizer (on-device when available) instead of recording a file.</string>
+    <string name="transcribe_unavailable">Speech recognition is not available on this device.</string>
+    <string name="setting_prompt">Prompt sent with the voice file</string>
+    <string name="setting_auto_read">Automatically tap \"Read aloud\" when the reply finishes</string>
+    <string name="setting_reply_timeout">Reply timeout (seconds)</string>
+    <string name="setting_max_recording">Max recording length (seconds)</string>
+
+    <string name="section_debug">Debug log</string>
+    <string name="debug_hint">Every automation step is logged here. When a step times out, the visible button labels are listed – add them to Selectors.java if ChatGPT renamed a button.</string>
+    <string name="debug_copy">Copy</string>
+    <string name="debug_clear">Clear</string>
+    <string name="debug_empty">(empty)</string>
+    <string name="debug_copied">Debug log copied</string>
+
+    <!-- Overlay states -->
+    <string name="state_idle">Tap to record</string>
+    <string name="state_recording">Recording – tap to send</string>
+    <string name="state_sending">Sending…</string>
+    <string name="state_waiting">Waiting for reply…</string>
+    <string name="state_reading">Reading aloud – tap to interrupt</string>
+    <string name="state_error">Error: %1$s</string>
+    <string name="hint_too_short">Too short – hold on a bit longer before tapping again</string>
+
+    <!-- Errors -->
+    <string name="error_mic_permission">Microphone permission denied</string>
+    <string name="error_recording_failed">Could not start recording</string>
+    <string name="error_no_recognizer">Speech recognition unavailable</string>
+    <string name="error_no_speech">No speech recognized</string>
+    <string name="error_share_failed">ChatGPT did not accept the audio file</string>
+    <string name="error_publish_failed">Could not prepare the file for the picker</string>
+    <string name="error_accessibility_disabled">Accessibility service is off – press Send manually</string>
+    <string name="error_chatgpt_missing">ChatGPT is not installed</string>
+    <string name="error_send_not_found">Send button not found</string>
+    <string name="error_file_not_in_picker">Recording not found in file picker</string>
+    <string name="error_reply_timeout">Timed out waiting for reply</string>
+    <string name="error_read_aloud_not_found">\"Read aloud\" not found</string>
+    <string name="error_automation">Automation step failed</string>
+
+    <!-- Notification -->
+    <string name="notification_channel">Voice overlay</string>
+    <string name="notification_title">Hands-free ChatGPT</string>
+    <string name="notification_stop">Stop</string>
+    <string name="notification_cancel">Cancel</string>
+
+    <!-- Accessibility -->
+    <string name="accessibility_description">Lets Vibeathon press Send and \"Read aloud\" in the ChatGPT app for the hands-free voice flow. It only watches the ChatGPT app and does not collect data.</string>
 </resources>
