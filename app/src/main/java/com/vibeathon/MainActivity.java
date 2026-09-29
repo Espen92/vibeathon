@@ -24,6 +24,8 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.vibeathon.core.DeliveryFailureMode;
+import com.vibeathon.core.DeliveryStrategy;
 import com.vibeathon.core.Selectors;
 
 /** Setup checklist, settings and debug log. */
@@ -91,6 +93,11 @@ public class MainActivity extends Activity {
             Toast.makeText(this, R.string.debug_copied, Toast.LENGTH_SHORT).show();
         });
         findViewById(R.id.debug_clear).setOnClickListener(v -> DebugLog.clear());
+        findViewById(R.id.button_probe).setOnClickListener(v -> {
+            Toast.makeText(this, R.string.probe_started, Toast.LENGTH_SHORT).show();
+            ShareTargets.probeAndLogAllAsync(this);
+        });
+        findViewById(R.id.button_retry).setOnClickListener(v -> retryDelivery());
     }
 
     @Override
@@ -138,15 +145,38 @@ public class MainActivity extends Activity {
         }
         group.setOnCheckedChangeListener((g, id) -> {
             if (id == R.id.strategy_accessibility) {
-                settings.setStrategy(AppSettings.Strategy.ACCESSIBILITY);
+                settings.setStrategy(DeliveryStrategy.ACCESSIBILITY);
             } else if (id == R.id.strategy_transcribe) {
-                settings.setStrategy(AppSettings.Strategy.TRANSCRIBE);
+                settings.setStrategy(DeliveryStrategy.TRANSCRIBE);
                 if (!Transcriber.isAvailable(this)) {
                     Toast.makeText(this, R.string.transcribe_unavailable, Toast.LENGTH_LONG)
                             .show();
                 }
             } else {
-                settings.setStrategy(AppSettings.Strategy.SHARE);
+                settings.setStrategy(DeliveryStrategy.SHARE);
+            }
+        });
+
+        RadioGroup failureGroup = findViewById(R.id.failure_group);
+        switch (settings.failureMode()) {
+            case CHOOSER_ONLY:
+                failureGroup.check(R.id.failure_chooser);
+                break;
+            case FAIL_FAST:
+                failureGroup.check(R.id.failure_fail_fast);
+                break;
+            case FALLBACK_CHAIN:
+            default:
+                failureGroup.check(R.id.failure_chain);
+                break;
+        }
+        failureGroup.setOnCheckedChangeListener((g, id) -> {
+            if (id == R.id.failure_chooser) {
+                settings.setFailureMode(DeliveryFailureMode.CHOOSER_ONLY);
+            } else if (id == R.id.failure_fail_fast) {
+                settings.setFailureMode(DeliveryFailureMode.FAIL_FAST);
+            } else {
+                settings.setFailureMode(DeliveryFailureMode.FALLBACK_CHAIN);
             }
         });
 
@@ -285,6 +315,20 @@ public class MainActivity extends Activity {
             }
         }
         handler.postDelayed(this::refreshStatus, 300);
+    }
+
+    /** Re-sends the last recording that could not be delivered. */
+    private void retryDelivery() {
+        if (!OverlayService.isRunning()) {
+            Toast.makeText(this, R.string.retry_needs_overlay, Toast.LENGTH_LONG).show();
+            return;
+        }
+        try {
+            startService(new Intent(this, OverlayService.class)
+                    .setAction(OverlayService.ACTION_RETRY));
+        } catch (RuntimeException e) {
+            DebugLog.error("Could not retry delivery", e);
+        }
     }
 
     private void open(Intent intent) {
