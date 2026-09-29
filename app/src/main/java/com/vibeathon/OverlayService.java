@@ -324,7 +324,7 @@ public final class OverlayService extends Service {
                     @Override
                     public void onDelivered(DeliveryPlan.Step step) {
                         DebugLog.log("Delivered via " + step);
-                        settings.setLastRecordingPath(null);
+                        rememberRecording(null);
                         onSendSucceeded(session);
                     }
 
@@ -389,8 +389,8 @@ public final class OverlayService extends Service {
             startActivity(send);
             DebugLog.log("Shared " + file.getName() + " to ChatGPT as " + mimeType);
         } catch (RuntimeException e) {
-            DebugLog.error("Direct share failed", e);
-            callback.onFailure(getString(R.string.error_no_share_target));
+            DebugLog.error("Direct share failed for " + mimeType, e);
+            callback.onFailure(getString(R.string.error_share_failed));
             return;
         }
         pressSend(callback);

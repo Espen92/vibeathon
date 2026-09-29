@@ -7,6 +7,9 @@ import java.util.List;
  * Runs delivery steps in order until one succeeds. Steps are asynchronous: the runner reports
  * back through {@link StepCallback}, and each callback is accepted only once so a late
  * duplicate cannot advance the chain twice.
+ *
+ * <p>Not thread safe: {@link #run} and every callback must be invoked on the same thread
+ * (the main thread in the app, where both the overlay and the accessibility service run).
  */
 public final class DeliveryChain {
 

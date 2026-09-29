@@ -128,13 +128,20 @@ public final class VoiceStateMachine {
      * from the failed attempt are ignored.
      */
     public boolean onRetryDelivery() {
+        Listener l;
         synchronized (this) {
             if (state != VoiceState.ERROR) {
                 return false;
             }
             session++;
+            state = VoiceState.SENDING;
+            message = null;
+            l = listener;
         }
-        return transition(VoiceState.SENDING, null);
+        if (l != null) {
+            l.onStateChanged(VoiceState.ERROR, VoiceState.SENDING, null);
+        }
+        return true;
     }
 
     public boolean onSent() {

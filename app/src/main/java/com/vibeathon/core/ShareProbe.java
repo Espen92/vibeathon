@@ -23,7 +23,10 @@ public final class ShareProbe {
             "application/octet-stream",
             "*/*"));
 
-    /** Resolves a MIME type to the component names that can receive it. Never returns null. */
+    /**
+     * Resolves a MIME type to the component names that can receive it. A null or empty list
+     * means the MIME type has no share target.
+     */
     public interface Resolver {
         List<String> resolve(String mimeType);
     }
