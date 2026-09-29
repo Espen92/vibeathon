@@ -194,6 +194,49 @@
         </RadioGroup>
 
         <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/setting_failure_mode"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/failure_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RadioButton
+                android:id="@+id/failure_chain"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/failure_chain" />
+
+            <RadioButton
+                android:id="@+id/failure_chooser"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/failure_chooser" />
+
+            <RadioButton
+                android:id="@+id/failure_fail_fast"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/failure_fail_fast" />
+        </RadioGroup>
+
+        <Button
+            android:id="@+id/button_probe"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/probe_share_targets" />
+
+        <Button
+            android:id="@+id/button_retry"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/retry_delivery" />
+
+        <TextView
             android:id="@+id/strategy_note"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

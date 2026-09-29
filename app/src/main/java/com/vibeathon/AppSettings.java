@@ -3,19 +3,12 @@ package com.vibeathon;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.vibeathon.core.DeliveryFailureMode;
+import com.vibeathon.core.DeliveryStrategy;
 import com.vibeathon.core.RecordingLimits;
 
 /** Typed wrapper around the app's SharedPreferences. */
 public final class AppSettings {
-
-    public enum Strategy {
-        /** ACTION_SEND audio file to ChatGPT, then press Send via accessibility. */
-        SHARE,
-        /** Attach the file through ChatGPT's own attachment menu via accessibility. */
-        ACCESSIBILITY,
-        /** Transcribe on-device with SpeechRecognizer and send text instead of a file. */
-        TRANSCRIBE
-    }
 
     private static final String PREFS = "vibeathon_settings";
     private static final String KEY_STRATEGY = "strategy";
@@ -23,6 +16,9 @@ public final class AppSettings {
     private static final String KEY_AUTO_READ = "auto_read_aloud";
     private static final String KEY_REPLY_TIMEOUT = "reply_timeout_seconds";
     private static final String KEY_MAX_RECORDING = "max_recording_seconds";
+    private static final String KEY_FAILURE_MODE = "failure_mode";
+    private static final String KEY_LAST_RECORDING = "last_recording_path";
+    private static final String KEY_CHOOSER_HINT_SHOWN = "chooser_hint_shown";
 
     public static final int DEFAULT_REPLY_TIMEOUT_SECONDS = 180;
     public static final int MIN_REPLY_TIMEOUT_SECONDS = 10;
@@ -37,17 +33,48 @@ public final class AppSettings {
         defaultPrompt = app.getString(R.string.default_prompt);
     }
 
-    public Strategy strategy() {
-        String value = prefs.getString(KEY_STRATEGY, Strategy.SHARE.name());
+    public DeliveryStrategy strategy() {
+        String value = prefs.getString(KEY_STRATEGY, DeliveryStrategy.SHARE.name());
         try {
-            return Strategy.valueOf(value);
+            return DeliveryStrategy.valueOf(value);
         } catch (IllegalArgumentException e) {
-            return Strategy.SHARE;
+            return DeliveryStrategy.SHARE;
         }
     }
 
-    public void setStrategy(Strategy strategy) {
+    public void setStrategy(DeliveryStrategy strategy) {
         prefs.edit().putString(KEY_STRATEGY, strategy.name()).apply();
+    }
+
+    public DeliveryFailureMode failureMode() {
+        String value = prefs.getString(KEY_FAILURE_MODE, DeliveryFailureMode.FALLBACK_CHAIN.name());
+        try {
+            return DeliveryFailureMode.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            return DeliveryFailureMode.FALLBACK_CHAIN;
+        }
+    }
+
+    public void setFailureMode(DeliveryFailureMode mode) {
+        prefs.edit().putString(KEY_FAILURE_MODE, mode.name()).apply();
+    }
+
+    /** Absolute path of the last recording that could not be delivered, or null. */
+    public String lastRecordingPath() {
+        return prefs.getString(KEY_LAST_RECORDING, null);
+    }
+
+    public void setLastRecordingPath(String path) {
+        prefs.edit().putString(KEY_LAST_RECORDING, path).apply();
+    }
+
+    /** True once the explanatory message for the system chooser has been shown. */
+    public boolean chooserHintShown() {
+        return prefs.getBoolean(KEY_CHOOSER_HINT_SHOWN, false);
+    }
+
+    public void setChooserHintShown(boolean shown) {
+        prefs.edit().putBoolean(KEY_CHOOSER_HINT_SHOWN, shown).apply();
     }
 
     public String prompt() {

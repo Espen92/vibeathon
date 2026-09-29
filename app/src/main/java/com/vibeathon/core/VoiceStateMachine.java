@@ -7,7 +7,7 @@ package com.vibeathon.core;
  * IDLE -> RECORDING -> SENDING -> AWAITING_REPLY -> READING -> IDLE
  *                         \-> IDLE (recording discarded)
  * any state -> ERROR, any state -> IDLE (cancel)
- * ERROR -> RECORDING (tap)
+ * ERROR -> RECORDING (tap), ERROR -> SENDING (retry delivery)
  * AWAITING_REPLY / READING -> RECORDING (tap = barge-in)
  * </pre>
  *
@@ -61,8 +61,10 @@ public final class VoiceStateMachine {
         }
         switch (from) {
             case IDLE:
-            case ERROR:
                 return to == VoiceState.RECORDING;
+            case ERROR:
+                // A retry re-sends the last recording without recording again.
+                return to == VoiceState.RECORDING || to == VoiceState.SENDING;
             case RECORDING:
                 return to == VoiceState.SENDING;
             case SENDING:
@@ -119,6 +121,20 @@ public final class VoiceStateMachine {
             return false;
         }
         return transitionFrom(s, VoiceState.IDLE, hint);
+    }
+
+    /**
+     * Re-sends the last recording after a failed delivery. Starts a new session so callbacks
+     * from the failed attempt are ignored.
+     */
+    public boolean onRetryDelivery() {
+        synchronized (this) {
+            if (state != VoiceState.ERROR) {
+                return false;
+            }
+            session++;
+        }
+        return transition(VoiceState.SENDING, null);
     }
 
     public boolean onSent() {

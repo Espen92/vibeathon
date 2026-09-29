@@ -28,6 +28,16 @@
     <string name="strategy_share">Share intent (default) – share the audio file to ChatGPT and press Send</string>
     <string name="strategy_accessibility">Accessibility – attach the file through ChatGPT\'s attachment menu (Android 10+)</string>
     <string name="strategy_transcribe">Transcribe fallback – on-device speech-to-text, send the transcript as text</string>
+    <string name="setting_failure_mode">On delivery failure</string>
+    <string name="failure_chain">Fallback chain (default) – try direct share, the accessibility attach flow, the system chooser and finally transcription</string>
+    <string name="failure_chooser">Chooser only – always open the system share sheet and pick ChatGPT manually</string>
+    <string name="failure_fail_fast">Fail fast – only run the selected delivery strategy and show an error</string>
+    <string name="probe_share_targets">Probe ChatGPT share targets</string>
+    <string name="probe_started">Probing share targets – see the debug log</string>
+    <string name="retry_delivery">Retry delivery</string>
+    <string name="retry_needs_overlay">Start the overlay first, then retry the last recording.</string>
+    <string name="chooser_title">Send voice memo</string>
+    <string name="chooser_hint">ChatGPT did not accept the audio file directly. Pick ChatGPT in the share sheet – this message is only shown once.</string>
     <string name="strategy_transcribe_note">Use the transcribe fallback if ChatGPT rejects or ignores audio attachments for your model or account. It uses Android\'s SpeechRecognizer (on-device when available) instead of recording a file.</string>
     <string name="transcribe_unavailable">Speech recognition is not available on this device.</string>
     <string name="setting_prompt">Prompt sent with the voice file</string>
@@ -57,6 +67,9 @@
     <string name="error_no_recognizer">Speech recognition unavailable</string>
     <string name="error_no_speech">No speech recognized</string>
     <string name="error_share_failed">ChatGPT did not accept the audio file</string>
+    <string name="error_no_share_target">ChatGPT has no audio share target</string>
+    <string name="error_chooser_failed">Could not open the share sheet</string>
+    <string name="error_transcribe_next">Audio delivery failed – tap to record again and it will be sent as text</string>
     <string name="error_publish_failed">Could not prepare the file for the picker</string>
     <string name="error_accessibility_disabled">Accessibility service is off – press Send manually</string>
     <string name="error_chatgpt_missing">ChatGPT is not installed</string>
@@ -71,6 +84,7 @@
     <string name="notification_title">Hands-free ChatGPT</string>
     <string name="notification_stop">Stop</string>
     <string name="notification_cancel">Cancel</string>
+    <string name="notification_retry">Retry</string>
 
     <!-- Accessibility -->
     <string name="accessibility_description">Lets Vibeathon press Send and \"Read aloud\" in the ChatGPT app for the hands-free voice flow. It only watches the ChatGPT app and does not collect data.</string>

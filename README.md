@@ -51,7 +51,7 @@ Details:
 - **Barge-in:** tapping while *Waiting for reply* or *Reading aloud* stops the current reply/playback and immediately starts a new recording.
 - Recordings shorter than 0.5 s are discarded with a hint. Recordings stop automatically at the max length (default 5 min) and are sent.
 - The notification's **Cancel** aborts the current step (back to Idle); **Stop** closes the overlay.
-- If something fails, the bubble shows **Error** with a short message, and the details are in the **Debug log**. Tap the bubble to start again.
+- If something fails, the bubble shows **Error** with a short message, and the details are in the **Debug log**. Tap the bubble to start again, or use **Retry** in the notification / **Retry delivery** on the setup screen to resend the last recording.
 
 ### Settings
 
@@ -59,6 +59,12 @@ Details:
   - **Share intent (default):** sends the `.m4a` file to ChatGPT with `ACTION_SEND` (`audio/mp4`, via the app's own read-only content provider) and the prompt as text. The accessibility service then waits for the attachment to finish loading and presses **Send**. If the prompt did not arrive, it is typed into the composer.
   - **Accessibility:** brings ChatGPT to the front and uses its own attachment menu (**Attach → Files**), selects the recording in the system file picker (it is temporarily copied to `Download/Vibeathon`), types the prompt and presses **Send**. Requires Android 10+. This keeps you in the current chat, but it is the most sensitive to UI changes.
   - **Transcribe fallback:** instead of recording a file, uses Android's `SpeechRecognizer` (on-device when available) and sends the **transcript as text**. Use this if ChatGPT rejects or ignores audio attachments for your model or account.
+- **On delivery failure**
+  - **Fallback chain (default):** if the preferred strategy fails, the next step is tried automatically: direct package-targeted share → accessibility attach → system chooser → transcription fallback.
+  - **Chooser only:** always open the system share sheet and pick ChatGPT manually.
+  - **Fail fast:** only run the selected strategy and show an **Error** when it fails.
+- **Probe ChatGPT share targets:** queries `PackageManager` for `ACTION_SEND` with `audio/mp4`, `audio/m4a`, `audio/*`, `application/octet-stream` and `*/*`, and writes every resolved component to the **Debug log**. Run this first when audio delivery fails.
+- **Retry delivery:** re-sends the last recording that could not be delivered (also available as **Retry** in the notification while the overlay runs).
 - **Prompt** (default `respond to the prompt in the voice file`).
 - **Auto "Read aloud"** on/off.
 - **Reply timeout** (default 180 s).
@@ -68,7 +74,10 @@ Details:
 ## Known limitations
 
 - **ChatGPT UI changes can break the automation.** Buttons are found only by their accessibility label or text, so a renamed button, such as "Send", "Read aloud" or "Stop generating", stops the flow until `Selectors` is updated. See below.
+- **ChatGPT does not declare a share filter for every audio MIME type.** A package-targeted `ACTION_SEND` with `audio/mp4` can fail with `ActivityNotFoundException: No Activity found to handle Intent … pkg=com.openai.chatgpt`. The app therefore probes the MIME types above and shares with the first one that resolves; if none resolves, it falls back to the accessibility attach flow, then the system chooser, and finally arms the transcription fallback. Every step and reason is in the **Debug log**, while the bubble only shows a short message (for example *ChatGPT has no audio share target*, *Send button not found*, *Could not open the share sheet*).
 - **Audio file support varies by model and account.** Some models may ignore the attachment or reply that they can't listen to audio. Switch to the **Transcribe fallback** in that case.
+- **Failed deliveries keep the recording.** The last `.m4a` stays in the app cache so **Retry delivery** can resend it without recording again.
+- **Android 11+ package visibility.** `AndroidManifest.xml` must declare `<queries>` for `com.openai.chatgpt` plus generic `ACTION_SEND` (`*/*`) and `https` `ACTION_VIEW` intents. Without them `queryIntentActivities()` returns nothing and package-targeted shares fail, even when ChatGPT is installed.
 - **The share intent may open a new chat.** Depending on the ChatGPT version, sharing a file may start a new conversation instead of adding to the current one. Use the **Accessibility** strategy to stay in the current chat.
 - **Reply completion is heuristic.** A reply counts as finished when the "Stop generating" control has disappeared and the newest text has not changed for about 1.5 s, or when a new "Read aloud"/feedback button appears.
 - **Read-aloud end detection:** if no "Stop reading"-type control can be detected, the bubble returns to Idle about 6 s after pressing Read aloud.
@@ -100,12 +109,16 @@ app/src/main/java/com/vibeathon/
   AudioRecorder.java                ← MediaRecorder → AAC .m4a (44.1 kHz, mono, 64 kbps)
   Transcriber.java                  ← SpeechRecognizer fallback
   AudioFileProvider.java            ← minimal read-only content provider (no AndroidX)
+  ShareTargets.java                 ← PackageManager share-target probe (MIME types, components)
   AppSettings.java                  ← SharedPreferences
   DebugLog.java                     ← in-app debug log
   core/                             ← plain Java, unit tested
     VoiceStateMachine.java          ← IDLE → RECORDING → SENDING → AWAITING_REPLY → READING → IDLE (+ ERROR, barge-in)
     ReplyCompletionDetector.java    ← "reply finished" logic with injectable Clock
     Selectors.java                  ← all ChatGPT UI labels
+    ShareProbe.java                 ← ordered audio MIME types + first supported type
+    DeliveryPlan.java               ← delivery steps for a strategy/failure mode
+    DeliveryChain.java              ← runs the steps in order until one succeeds
 app/src/test/java/com/vibeathon/core/ ← JUnit tests
 .github/workflows/android.yml       ← runs tests, builds and uploads `app-debug`
 ```

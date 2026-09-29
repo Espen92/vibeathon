@@ -96,6 +96,21 @@ public class VoiceStateMachineTest {
     }
 
     @Test
+    public void retryDeliveryResendsFromErrorInANewSession() {
+        machine.onTap();
+        machine.onTap();
+        int failedSession = machine.session();
+        machine.onError("ChatGPT did not accept the audio file");
+        assertTrue(machine.onRetryDelivery());
+        assertEquals(VoiceState.SENDING, machine.state());
+        assertNotEquals(failedSession, machine.session());
+        // Stale callback from the failed attempt must not advance the retry.
+        assertFalse(machine.isCurrent(failedSession, VoiceState.SENDING));
+        // Retry is only possible from ERROR.
+        assertFalse(machine.onRetryDelivery());
+    }
+
+    @Test
     public void discardedRecordingReturnsToIdleWithHint() {
         machine.onTap();
         machine.onTap();

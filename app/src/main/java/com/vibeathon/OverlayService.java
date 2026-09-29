@@ -33,9 +33,14 @@ import android.view.ViewConfiguration;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.vibeathon.core.DeliveryChain;
+import com.vibeathon.core.DeliveryPlan;
+import com.vibeathon.core.DeliveryStrategy;
 import com.vibeathon.core.RecordingLimits;
 import com.vibeathon.core.Selectors;
+import com.vibeathon.core.ShareProbe;
 import com.vibeathon.core.VoiceState;
 import com.vibeathon.core.VoiceStateMachine;
 
@@ -43,6 +48,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
 
 /**
  * Foreground service that shows the draggable overlay bubble and runs the tap-tap flow:
@@ -52,6 +58,7 @@ public final class OverlayService extends Service {
 
     public static final String ACTION_STOP = "com.vibeathon.action.STOP";
     public static final String ACTION_CANCEL = "com.vibeathon.action.CANCEL";
+    public static final String ACTION_RETRY = "com.vibeathon.action.RETRY";
 
     private static final String CHANNEL_ID = "overlay";
     private static final int NOTIFICATION_ID = 1;
@@ -72,6 +79,8 @@ public final class OverlayService extends Service {
     private TextView label;
     private WindowManager.LayoutParams params;
     private Uri publishedUri;
+    private File lastRecording;
+    private boolean transcribeFallbackArmed;
     private long recordingStartedAt;
     private String lastNotificationStatus;
 
@@ -127,6 +136,8 @@ public final class OverlayService extends Service {
             DebugLog.log("Cancel from notification");
             cancelCurrent();
             machine.cancel();
+        } else if (ACTION_RETRY.equals(action)) {
+            retryDelivery();
         }
         return START_NOT_STICKY;
     }
@@ -194,7 +205,10 @@ public final class OverlayService extends Service {
         }
         int session = machine.session();
         try {
-            if (settings.strategy() == AppSettings.Strategy.TRANSCRIBE) {
+            boolean transcribe = settings.strategy() == DeliveryStrategy.TRANSCRIBE
+                    || transcribeFallbackArmed;
+            transcribeFallbackArmed = false;
+            if (transcribe) {
                 if (!Transcriber.isAvailable(this)) {
                     fail(getString(R.string.error_no_recognizer), null);
                     return;
@@ -261,52 +275,215 @@ public final class OverlayService extends Service {
             machine.onRecordingDiscarded(getString(R.string.hint_too_short));
             return;
         }
-        if (settings.strategy() == AppSettings.Strategy.ACCESSIBILITY) {
-            deliverViaAccessibility(session, result.file);
-        } else {
-            deliverViaShare(session, result.file);
+        rememberRecording(result.file);
+        deliver(session, result.file);
+    }
+
+    /** Keeps the last .m4a around so a failed delivery can be retried. */
+    private void rememberRecording(File file) {
+        lastRecording = file;
+        settings.setLastRecordingPath(file == null ? null : file.getAbsolutePath());
+    }
+
+    private File retainedRecording() {
+        File file = lastRecording;
+        if (file == null) {
+            String path = settings.lastRecordingPath();
+            file = path == null ? null : new File(path);
+        }
+        return file != null && file.isFile() && file.length() > 0 ? file : null;
+    }
+
+    /** Re-sends the last recording after a failed delivery (notification / settings screen). */
+    private void retryDelivery() {
+        File file = retainedRecording();
+        if (file == null) {
+            DebugLog.log("Retry requested but no recording is available");
+            return;
+        }
+        if (!machine.onRetryDelivery()) {
+            DebugLog.log("Retry ignored in state " + machine.state());
+            return;
+        }
+        DebugLog.log("Retrying delivery of " + file.getName());
+        deliver(machine.session(), file);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Delivery fallback chain
+    // ---------------------------------------------------------------------------------------
+
+    private void deliver(int session, File file) {
+        List<DeliveryPlan.Step> steps =
+                DeliveryPlan.plan(settings.strategy(), settings.failureMode());
+        DebugLog.log("Delivery plan (" + settings.strategy() + ", " + settings.failureMode()
+                + "): " + steps);
+        DeliveryChain.run(steps,
+                (step, callback) -> runStep(session, file, step, callback),
+                new DeliveryChain.Outcome() {
+                    @Override
+                    public void onDelivered(DeliveryPlan.Step step) {
+                        DebugLog.log("Delivered via " + step);
+                        settings.setLastRecordingPath(null);
+                        onSendSucceeded(session);
+                    }
+
+                    @Override
+                    public void onExhausted(DeliveryPlan.Step lastStep, String lastReason,
+                            List<String> failures) {
+                        for (String failure : failures) {
+                            DebugLog.log("Delivery step failed - " + failure);
+                        }
+                        DebugLog.log("Recording kept for retry: "
+                                + (file == null ? "none" : file.getName()));
+                        fail(lastReason == null
+                                ? getString(R.string.error_share_failed) : lastReason, null);
+                    }
+                });
+    }
+
+    private void runStep(int session, File file, DeliveryPlan.Step step,
+            DeliveryChain.StepCallback callback) {
+        if (!machine.isCurrent(session, VoiceState.SENDING)) {
+            callback.onFailure(getString(R.string.error_automation));
+            return;
+        }
+        DebugLog.log("Delivery step: " + step);
+        try {
+            switch (step) {
+                case DIRECT_SHARE:
+                    directShare(file, callback);
+                    break;
+                case ACCESSIBILITY_ATTACH:
+                    accessibilityAttach(file, callback);
+                    break;
+                case CHOOSER:
+                    chooserShare(file, callback);
+                    break;
+                case TRANSCRIBE:
+                default:
+                    armTranscribeFallback(callback);
+                    break;
+            }
+        } catch (RuntimeException e) {
+            DebugLog.error("Delivery step " + step + " crashed", e);
+            callback.onFailure(getString(R.string.error_automation));
         }
     }
 
-    private void deliverViaShare(int session, File file) {
-        Uri uri = AudioFileProvider.uriFor(this, file);
-        Intent send = new Intent(Intent.ACTION_SEND);
-        send.setType(AudioFileProvider.MIME_TYPE);
-        send.putExtra(Intent.EXTRA_STREAM, uri);
-        send.putExtra(Intent.EXTRA_TEXT, settings.prompt());
-        send.setClipData(ClipData.newRawUri(file.getName(), uri));
-        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+    /** Package-targeted ACTION_SEND using the first MIME type ChatGPT actually accepts. */
+    private void directShare(File file, DeliveryChain.StepCallback callback) {
+        List<ShareProbe.Result> probed = ShareProbe.probe(
+                ShareTargets.resolver(this, Selectors.CHATGPT_PACKAGE));
+        for (ShareProbe.Result result : probed) {
+            DebugLog.log("Probe ChatGPT: " + result);
+        }
+        String mimeType = ShareProbe.firstSupportedMimeType(probed);
+        if (mimeType == null) {
+            callback.onFailure(getString(R.string.error_no_share_target));
+            return;
+        }
+        Intent send = shareIntent(file, mimeType);
         send.setPackage(Selectors.CHATGPT_PACKAGE);
         try {
-            grantUriPermission(Selectors.CHATGPT_PACKAGE, uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(send);
-            DebugLog.log("Shared " + file.getName() + " to ChatGPT");
+            DebugLog.log("Shared " + file.getName() + " to ChatGPT as " + mimeType);
         } catch (RuntimeException e) {
-            fail(getString(R.string.error_share_failed), e);
+            DebugLog.error("Direct share failed", e);
+            callback.onFailure(getString(R.string.error_no_share_target));
             return;
         }
-        ChatGptAccessibilityService a11y = ChatGptAccessibilityService.get();
-        if (a11y == null) {
-            fail(getString(R.string.error_accessibility_disabled), null);
-            return;
-        }
-        a11y.pressSendWhenReady(settings.prompt(), SEND_TIMEOUT_MS, sentCallback(session));
+        pressSend(callback);
     }
 
-    private void deliverViaAccessibility(int session, File file) {
+    private void accessibilityAttach(File file, DeliveryChain.StepCallback callback) {
         ChatGptAccessibilityService a11y = ChatGptAccessibilityService.get();
         if (a11y == null) {
-            fail(getString(R.string.error_accessibility_disabled), null);
+            callback.onFailure(getString(R.string.error_accessibility_disabled));
             return;
         }
         String displayName = publishToDownloads(file);
         if (displayName == null) {
-            fail(getString(R.string.error_publish_failed), null);
+            callback.onFailure(getString(R.string.error_publish_failed));
             return;
         }
         a11y.attachFileAndSend(displayName, settings.prompt(), SEND_TIMEOUT_MS,
-                sentCallback(session));
+                stepCallback(callback));
+    }
+
+    /** System share sheet, so the user can hand the file to ChatGPT (or any other app). */
+    private void chooserShare(File file, DeliveryChain.StepCallback callback) {
+        Intent send = shareIntent(file, AudioFileProvider.MIME_TYPE);
+        Intent chooser = Intent.createChooser(send, getString(R.string.chooser_title));
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivity(chooser);
+        } catch (RuntimeException e) {
+            DebugLog.error("Chooser failed", e);
+            callback.onFailure(getString(R.string.error_chooser_failed));
+            return;
+        }
+        if (!settings.chooserHintShown()) {
+            settings.setChooserHintShown(true);
+            DebugLog.log(getString(R.string.chooser_hint));
+            handler.post(() -> Toast.makeText(this, R.string.chooser_hint, Toast.LENGTH_LONG)
+                    .show());
+        }
+        pressSend(callback);
+    }
+
+    /**
+     * Last resort: the recorded file cannot be fed to SpeechRecognizer, so arm the on-device
+     * transcription fallback for the next memo and tell the user.
+     */
+    private void armTranscribeFallback(DeliveryChain.StepCallback callback) {
+        if (!Transcriber.isAvailable(this)) {
+            callback.onFailure(getString(R.string.error_no_recognizer));
+            return;
+        }
+        transcribeFallbackArmed = true;
+        callback.onFailure(getString(R.string.error_transcribe_next));
+    }
+
+    private void pressSend(DeliveryChain.StepCallback callback) {
+        ChatGptAccessibilityService a11y = ChatGptAccessibilityService.get();
+        if (a11y == null) {
+            callback.onFailure(getString(R.string.error_accessibility_disabled));
+            return;
+        }
+        a11y.pressSendWhenReady(settings.prompt(), SEND_TIMEOUT_MS, stepCallback(callback));
+    }
+
+    private Intent shareIntent(File file, String mimeType) {
+        Uri uri = AudioFileProvider.uriFor(this, file);
+        Intent send = new Intent(Intent.ACTION_SEND);
+        send.setType(mimeType);
+        send.putExtra(Intent.EXTRA_STREAM, uri);
+        send.putExtra(Intent.EXTRA_TEXT, settings.prompt());
+        send.setClipData(ClipData.newRawUri(file.getName(), uri));
+        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            grantUriPermission(Selectors.CHATGPT_PACKAGE, uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (RuntimeException e) {
+            DebugLog.error("Could not pre-grant read permission", e);
+        }
+        return send;
+    }
+
+    private ChatGptAccessibilityService.Callback stepCallback(
+            DeliveryChain.StepCallback callback) {
+        return new ChatGptAccessibilityService.Callback() {
+            @Override
+            public void onSuccess() {
+                callback.onSuccess();
+            }
+
+            @Override
+            public void onFailure(String message) {
+                callback.onFailure(message);
+            }
+        };
     }
 
     private void deliverText(int session, String text) {
@@ -332,15 +509,7 @@ public final class OverlayService extends Service {
         return new ChatGptAccessibilityService.Callback() {
             @Override
             public void onSuccess() {
-                if (!machine.isCurrent(session, VoiceState.SENDING) || !machine.onSent()) {
-                    return;
-                }
-                ChatGptAccessibilityService a11y = ChatGptAccessibilityService.get();
-                if (a11y == null) {
-                    fail(getString(R.string.error_accessibility_disabled), null);
-                    return;
-                }
-                a11y.awaitReply(settings.replyTimeoutSeconds() * 1000L, replyCallback(session));
+                onSendSucceeded(session);
             }
 
             @Override
@@ -350,6 +519,19 @@ public final class OverlayService extends Service {
                 }
             }
         };
+    }
+
+    /** The prompt is in the chat: move on to waiting for ChatGPT's reply. */
+    private void onSendSucceeded(int session) {
+        if (!machine.isCurrent(session, VoiceState.SENDING) || !machine.onSent()) {
+            return;
+        }
+        ChatGptAccessibilityService a11y = ChatGptAccessibilityService.get();
+        if (a11y == null) {
+            fail(getString(R.string.error_accessibility_disabled), null);
+            return;
+        }
+        a11y.awaitReply(settings.replyTimeoutSeconds() * 1000L, replyCallback(session));
     }
 
     private ChatGptAccessibilityService.Callback replyCallback(int session) {
@@ -701,7 +883,7 @@ public final class OverlayService extends Service {
                 new Intent(this, OverlayService.class).setAction(ACTION_STOP), flags);
         PendingIntent cancel = PendingIntent.getService(this, 2,
                 new Intent(this, OverlayService.class).setAction(ACTION_CANCEL), flags);
-        return new Notification.Builder(this, CHANNEL_ID)
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_btn_speak_now)
                 .setContentTitle(getString(R.string.notification_title))
                 .setContentText(status)
@@ -711,8 +893,14 @@ public final class OverlayService extends Service {
                 .addAction(new Notification.Action.Builder(null,
                         getString(R.string.notification_stop), stop).build())
                 .addAction(new Notification.Action.Builder(null,
-                        getString(R.string.notification_cancel), cancel).build())
-                .build();
+                        getString(R.string.notification_cancel), cancel).build());
+        if (retainedRecording() != null) {
+            PendingIntent retry = PendingIntent.getService(this, 3,
+                    new Intent(this, OverlayService.class).setAction(ACTION_RETRY), flags);
+            builder.addAction(new Notification.Action.Builder(null,
+                    getString(R.string.notification_retry), retry).build());
+        }
+        return builder.build();
     }
 
     private boolean startInForeground() {

@@ -7,8 +7,24 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!--
+      Android 11+ package visibility. Without these entries queryIntentActivities() and
+      ACTION_SEND with setPackage() cannot see the ChatGPT app or any share target.
+    -->
     <queries>
         <package android:name="com.openai.chatgpt" />
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND_MULTIPLE" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
