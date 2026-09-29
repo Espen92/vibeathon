@@ -1,45 +1,55 @@
 # Vibeathon
 
-A minimal Android app for the vibeathon event. Builds to a debug APK via GitHub Actions.
+A minimal native Android app (one screen, one button). GitHub Actions builds the
+installable debug APK — no hosting, no backend, no computer needed.
 
-## Build & Install
+## Phone-only workflow
 
-1. **Trigger the build:** Push a commit to `main` (or open a PR). GitHub Actions runs automatically.
-2. **Download the APK:** 
-   - Go to the workflow run on GitHub.
-   - Scroll to "Artifacts" and download `app-debug.apk`.
-3. **Install on Android:**
-   - Move/download the APK to your phone.
-   - Open it in a file manager or download app.
-   - Tap to install (you may need to allow unknown sources in settings).
-   - Open "Vibeathon" from your home screen.
+1. **Trigger a build:** Commit and push a change (or open a pull request) from the
+   GitHub mobile app. The `Android CI` workflow starts automatically.
+2. **Open the workflow run:** Go to the repo → **Actions** → the newest
+   **Android CI** run. (If the mobile app is awkward here, open the same page in
+   your phone's browser.)
+3. **Download the APK:** Scroll to **Artifacts** and tap **app-debug-apk**.
+   You get a ZIP; extract `app-debug.apk` with any file manager.
+4. **Install it:** Tap the APK, allow "install unknown apps" for your browser or
+   file manager if prompted, and install. Then open **Vibeathon** from your app
+   drawer.
 
-## No Hosting Required
+Tap the button on the screen and the welcome message changes — that confirms the
+whole edit → build → download → install loop works.
 
-The app is entirely local—it runs on your phone and doesn't connect to any server.
+> Artifact downloads require being signed in to GitHub with read access to this
+> repo.
 
-## Edit & Build from Your Phone
+## No hosting required
 
-You can edit the code directly in the GitHub app, commit, and let GitHub Actions build the new APK. The workflow handles all the Android SDK setup.
+The app is entirely local. It has no network permission, no server, no
+analytics, and no sign-in. Everything runs on the phone.
 
-## Project Structure
+## Project structure
 
 ```
 app/
+  build.gradle.kts                    ← app module build config
   src/main/
-    AndroidManifest.xml     ← app metadata
+    AndroidManifest.xml               ← app metadata
     java/com/vibeathon/
-      MainActivity.kt       ← main app logic
+      MainActivity.java               ← the single Activity
     res/
-      layout/
-        activity_main.xml   ← UI layout
-      values/
-        strings.xml         ← app strings
-        colors.xml          ← colors
-build.gradle.kts            ← Gradle build config
-settings.gradle.kts         ← project settings
+      layout/activity_main.xml        ← the one screen
+      values/strings.xml              ← app name and messages
+build.gradle.kts                      ← root build config
+settings.gradle.kts                   ← project settings
+gradle/wrapper/                       ← Gradle wrapper
+.github/workflows/android.yml         ← builds and uploads the debug APK
 ```
 
----
+No AndroidX or third-party libraries — just the Android framework.
 
-**Built for a phone-only workflow. No IDE, no computer, no hosting required.**
+## Notes
+
+- The APK is a **debug** build. It is signed with the standard debug key, which
+  is fine for testing and demos but is not a Play Store release.
+- To build locally instead: `./gradlew assembleDebug`, then find the APK at
+  `app/build/outputs/apk/debug/app-debug.apk`.

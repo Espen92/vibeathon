@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Vibeathon</string>
+    <string name="message_hello">Hello World — welcome to the Vibeathon!</string>
+    <string name="message_tapped">You tapped the button. It works! 🎉</string>
+    <string name="button_label">Tap me</string>
+</resources>
