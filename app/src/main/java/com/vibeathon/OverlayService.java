@@ -282,6 +282,12 @@ public final class OverlayService extends Service {
 
     /** Keeps the last .m4a around so a failed delivery can be retried. */
     private void rememberRecording(File file) {
+        File previous = lastRecording;
+        if (previous != null && file != null && !previous.equals(file) && previous.isFile()) {
+            // The old recording can no longer be retried, so it does not need to stay around.
+            //noinspection ResultOfMethodCallIgnored
+            previous.delete();
+        }
         lastRecording = file;
         settings.setLastRecordingPath(file == null ? null : file.getAbsolutePath());
     }

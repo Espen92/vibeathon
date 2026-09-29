@@ -61,10 +61,9 @@ public final class VoiceStateMachine {
         }
         switch (from) {
             case IDLE:
-                return to == VoiceState.RECORDING;
             case ERROR:
-                // A retry re-sends the last recording without recording again.
-                return to == VoiceState.RECORDING || to == VoiceState.SENDING;
+                // ERROR -> SENDING is only reachable through onRetryDelivery().
+                return to == VoiceState.RECORDING;
             case RECORDING:
                 return to == VoiceState.SENDING;
             case SENDING:

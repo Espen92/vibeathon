@@ -148,6 +148,27 @@ public class DeliveryChainTest {
     }
 
     @Test
+    public void asynchronousStepsContinueTheChainWhenTheyReportLater() {
+        List<Step> attempted = new ArrayList<>();
+        List<DeliveryChain.StepCallback> deferred = new ArrayList<>();
+        RecordingOutcome outcome = new RecordingOutcome();
+
+        DeliveryChain.run(DeliveryPlan.plan(DeliveryStrategy.SHARE,
+                DeliveryFailureMode.FALLBACK_CHAIN), (step, callback) -> {
+                    attempted.add(step);
+                    deferred.add(callback);
+                }, outcome);
+
+        // Only the first step started; it reports back later, like the accessibility service.
+        assertEquals(Collections.singletonList(Step.DIRECT_SHARE), attempted);
+        deferred.get(0).onFailure("timeout");
+        assertEquals(Arrays.asList(Step.DIRECT_SHARE, Step.ACCESSIBILITY_ATTACH), attempted);
+        deferred.get(1).onSuccess();
+        assertEquals(Step.ACCESSIBILITY_ATTACH, outcome.delivered);
+        assertEquals(0, outcome.exhaustedCount);
+    }
+
+    @Test
     public void emptyPlanIsReportedAsExhausted() {
         RecordingOutcome outcome = new RecordingOutcome();
 

@@ -15,7 +15,12 @@ public final class DeliveryPlan {
         ACCESSIBILITY_ATTACH,
         /** System share sheet, so the user can pick ChatGPT manually. */
         CHOOSER,
-        /** On-device speech-to-text, sending the transcript as plain text. */
+        /**
+         * On-device speech-to-text. A finished .m4a cannot be fed to SpeechRecognizer, so as
+         * the last step of a chain this only arms the transcription fallback for the next
+         * memo and always reports failure; it delivers text only when it is the whole plan
+         * (the transcribe strategy, which never produces a file).
+         */
         TRANSCRIBE
     }
 

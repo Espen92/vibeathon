@@ -41,6 +41,10 @@ public final class DeliveryChain {
     private final List<String> failures = new ArrayList<>();
     private int index;
     private boolean finished;
+    private boolean running;
+    private boolean pending;
+    private DeliveryPlan.Step pendingStep;
+    private String pendingReason;
 
     private DeliveryChain(List<DeliveryPlan.Step> steps, StepRunner runner, Outcome outcome) {
         this.steps = new ArrayList<>(steps);
@@ -52,16 +56,42 @@ public final class DeliveryChain {
         new DeliveryChain(steps, runner, outcome).next(null, null);
     }
 
+    /**
+     * Starts the next step. Steps that fail synchronously are handled iteratively (the
+     * {@code running} flag turns the re-entrant call into another loop iteration) so that a
+     * long plan cannot grow the stack.
+     */
     private void next(DeliveryPlan.Step lastStep, String lastReason) {
-        if (finished) {
+        if (running) {
+            pending = true;
+            pendingStep = lastStep;
+            pendingReason = lastReason;
             return;
         }
-        if (index >= steps.size()) {
-            finished = true;
-            outcome.onExhausted(lastStep, lastReason, new ArrayList<>(failures));
-            return;
+        running = true;
+        try {
+            DeliveryPlan.Step previous = lastStep;
+            String reason = lastReason;
+            do {
+                pending = false;
+                if (finished) {
+                    return;
+                }
+                if (index >= steps.size()) {
+                    finished = true;
+                    outcome.onExhausted(previous, reason, new ArrayList<>(failures));
+                    return;
+                }
+                runStep(steps.get(index++));
+                previous = pendingStep;
+                reason = pendingReason;
+            } while (pending);
+        } finally {
+            running = false;
         }
-        final DeliveryPlan.Step step = steps.get(index++);
+    }
+
+    private void runStep(final DeliveryPlan.Step step) {
         runner.run(step, new StepCallback() {
             private boolean used;
 
