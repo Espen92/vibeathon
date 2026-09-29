@@ -39,9 +39,8 @@ public class ShareProbeTest {
 
     @Test
     public void firstSupportedMimeTypeSkipsUnsupportedTypes() {
-        List<String> probed = new ArrayList<>();
         List<ShareProbe.Result> results = ShareProbe.probe(
-                resolverFor(Arrays.asList("audio/*", "*/*"), probed));
+                resolverFor(Arrays.asList("audio/*", "*/*"), new ArrayList<>()));
 
         assertEquals("audio/*", ShareProbe.firstSupportedMimeType(results));
         assertTrue(results.get(2).supported());
@@ -51,9 +50,8 @@ public class ShareProbeTest {
 
     @Test
     public void firstSupportedMimeTypeIsNullWhenNothingAcceptsAudio() {
-        List<String> probed = new ArrayList<>();
         List<ShareProbe.Result> results =
-                ShareProbe.probe(resolverFor(Collections.emptyList(), probed));
+                ShareProbe.probe(resolverFor(Collections.emptyList(), new ArrayList<>()));
 
         assertNull(ShareProbe.firstSupportedMimeType(results));
     }

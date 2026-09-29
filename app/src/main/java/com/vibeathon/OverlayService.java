@@ -40,7 +40,6 @@ import com.vibeathon.core.DeliveryPlan;
 import com.vibeathon.core.DeliveryStrategy;
 import com.vibeathon.core.RecordingLimits;
 import com.vibeathon.core.Selectors;
-import com.vibeathon.core.ShareProbe;
 import com.vibeathon.core.VoiceState;
 import com.vibeathon.core.VoiceStateMachine;
 
@@ -63,6 +62,8 @@ public final class OverlayService extends Service {
     private static final String CHANNEL_ID = "overlay";
     private static final int NOTIFICATION_ID = 1;
     private static final long SEND_TIMEOUT_MS = 30_000;
+    /** The chooser needs extra time: the user has to pick ChatGPT first. */
+    private static final long CHOOSER_SEND_TIMEOUT_MS = 90_000;
     private static final long HINT_DURATION_MS = 3000;
 
     private static boolean running;
@@ -373,12 +374,7 @@ public final class OverlayService extends Service {
 
     /** Package-targeted ACTION_SEND using the first MIME type ChatGPT actually accepts. */
     private void directShare(File file, DeliveryChain.StepCallback callback) {
-        List<ShareProbe.Result> probed = ShareProbe.probe(
-                ShareTargets.resolver(this, Selectors.CHATGPT_PACKAGE));
-        for (ShareProbe.Result result : probed) {
-            DebugLog.log("Probe ChatGPT: " + result);
-        }
-        String mimeType = ShareProbe.firstSupportedMimeType(probed);
+        String mimeType = ShareTargets.probeChatGpt(this);
         if (mimeType == null) {
             callback.onFailure(getString(R.string.error_no_share_target));
             return;
@@ -393,7 +389,7 @@ public final class OverlayService extends Service {
             callback.onFailure(getString(R.string.error_share_failed));
             return;
         }
-        pressSend(callback);
+        pressSend(callback, SEND_TIMEOUT_MS);
     }
 
     private void accessibilityAttach(File file, DeliveryChain.StepCallback callback) {
@@ -429,7 +425,7 @@ public final class OverlayService extends Service {
             handler.post(() -> Toast.makeText(this, R.string.chooser_hint, Toast.LENGTH_LONG)
                     .show());
         }
-        pressSend(callback);
+        pressSend(callback, CHOOSER_SEND_TIMEOUT_MS);
     }
 
     /**
@@ -445,13 +441,13 @@ public final class OverlayService extends Service {
         callback.onFailure(getString(R.string.error_transcribe_next));
     }
 
-    private void pressSend(DeliveryChain.StepCallback callback) {
+    private void pressSend(DeliveryChain.StepCallback callback, long timeoutMs) {
         ChatGptAccessibilityService a11y = ChatGptAccessibilityService.get();
         if (a11y == null) {
             callback.onFailure(getString(R.string.error_accessibility_disabled));
             return;
         }
-        a11y.pressSendWhenReady(settings.prompt(), SEND_TIMEOUT_MS, stepCallback(callback));
+        a11y.pressSendWhenReady(settings.prompt(), timeoutMs, stepCallback(callback));
     }
 
     private Intent shareIntent(File file, String mimeType) {

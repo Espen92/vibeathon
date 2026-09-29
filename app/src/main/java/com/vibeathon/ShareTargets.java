@@ -61,6 +61,15 @@ public final class ShareTargets {
         return probe(context, Selectors.CHATGPT_PACKAGE, "ChatGPT");
     }
 
+    /**
+     * Probes ChatGPT first and, when nothing resolves, all installed share targets. Runs off
+     * the caller's thread because a full probe is up to ten package manager queries.
+     */
+    public static void probeAndLogAllAsync(Context context) {
+        Context app = context.getApplicationContext();
+        new Thread(() -> probeAndLogAll(app), "share-target-probe").start();
+    }
+
     /** Probes ChatGPT first and, when nothing resolves, all installed share targets. */
     public static void probeAndLogAll(Context context) {
         DebugLog.log("Probing share targets (" + ShareProbe.MIME_TYPES + ")");

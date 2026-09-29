@@ -95,7 +95,7 @@ public class MainActivity extends Activity {
         findViewById(R.id.debug_clear).setOnClickListener(v -> DebugLog.clear());
         findViewById(R.id.button_probe).setOnClickListener(v -> {
             Toast.makeText(this, R.string.probe_started, Toast.LENGTH_SHORT).show();
-            ShareTargets.probeAndLogAll(this);
+            ShareTargets.probeAndLogAllAsync(this);
         });
         findViewById(R.id.button_retry).setOnClickListener(v -> retryDelivery());
     }
